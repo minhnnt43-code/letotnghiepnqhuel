@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin - Quản lý Lễ Tốt Nghiệp</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <!-- LOGIN -->
+  <div class="admin-login" id="loginScreen">
+    <div class="login-card">
+      <h2>🎓 Admin Panel</h2>
+      <p>Đăng nhập để quản lý website lễ tốt nghiệp</p>
+      <div class="form-group">
+        <label for="loginUser">Tài khoản</label>
+        <input type="text" id="loginUser" placeholder="Tài khoản">
+      </div>
+      <div class="form-group">
+        <label for="loginPass">Mật khẩu</label>
+        <input type="password" id="loginPass" placeholder="Mật khẩu">
+      </div>
+      <button class="btn btn-primary" onclick="login()" style="width:100%;justify-content:center">
+        <i class="fas fa-sign-in-alt"></i> Đăng nhập
+      </button>
+      <p class="login-error" id="loginError">Sai tài khoản hoặc mật khẩu!</p>
+    </div>
+  </div>
+
+  <!-- DASHBOARD -->
+  <div class="admin-body" id="dashboard" style="display:none">
+    <!-- Sidebar -->
+    <aside class="admin-sidebar">
+      <div class="sidebar-header">
+        <h3>🎓 Admin</h3>
+        <p>Quản lý lễ tốt nghiệp</p>
+      </div>
+      <nav class="sidebar-nav">
+        <a href="#" class="active" data-page="stats" onclick="switchPage('stats',this)"><i class="fas fa-chart-bar"></i> Tổng quan</a>
+        <a href="#" data-page="settings" onclick="switchPage('settings',this)"><i class="fas fa-cog"></i> Thông tin sự kiện</a>
+        <a href="#" data-page="gallery" onclick="switchPage('gallery',this)"><i class="fas fa-images"></i> Gallery</a>
+        <a href="#" data-page="invitation" onclick="switchPage('invitation',this)"><i class="fas fa-envelope"></i> Thiệp mời</a>
+        <a href="#" data-page="guestbookAdmin" onclick="switchPage('guestbookAdmin',this)"><i class="fas fa-book"></i> Lưu bút</a>
+      </nav>
+      <div class="sidebar-footer">
+        <button class="btn btn-sm btn-secondary" onclick="logout()" style="width:100%;justify-content:center">
+          <i class="fas fa-sign-out-alt"></i> Đăng xuất
+        </button>
+      </div>
+    </aside>
+
+    <!-- Main content -->
+    <main class="admin-main">
+
+      <!-- STATS PAGE -->
+      <div class="admin-page active" id="page-stats">
+        <h2><i class="fas fa-chart-bar"></i> Tổng quan</h2>
+        <div class="stats-grid">
+          <div class="stat-card"><div class="stat-number" id="statPhotos">0</div><div class="stat-label">Hình ảnh</div></div>
+          <div class="stat-card"><div class="stat-number" id="statGuestbook">0</div><div class="stat-label">Lưu bút</div></div>
+          <div class="stat-card"><div class="stat-number" id="statPending">0</div><div class="stat-label">Chờ duyệt</div></div>
+        </div>
+        <div class="admin-card" id="firebaseStatus">
+          <h4><i class="fas fa-database"></i> Trạng thái Firebase</h4>
+          <p id="fbStatusText">Đang kiểm tra...</p>
+        </div>
+      </div>
+
+      <!-- SETTINGS PAGE -->
+      <div class="admin-page" id="page-settings">
+        <h2><i class="fas fa-cog"></i> Thông tin sự kiện</h2>
+        <div class="admin-card">
+          <div class="form-group">
+            <label>Tên tân cử nhân</label>
+            <input type="text" id="setName" value="Nguyễn Quốc Hữu" placeholder="Nguyễn Quốc Hữu">
+          </div>
+          <div class="form-group">
+            <label>Ngày lễ (dùng cho countdown)</label>
+            <input type="datetime-local" id="setDate" value="2026-06-15T08:00">
+          </div>
+          <div class="form-group">
+            <label>Thời gian hiển thị</label>
+            <input type="text" id="setTime" value="08g00, Thứ Hai, ngày 15/06/2026" placeholder="08g00 ngày 15/06/2026">
+          </div>
+          <div class="form-group">
+            <label>Địa điểm</label>
+            <input type="text" id="setLocation" value="Trường Đại học Kinh tế - Luật, ĐHQG-HCM" placeholder="Trường Đại học Kinh tế - Luật, ĐHQG-HCM">
+          </div>
+          <button class="btn btn-primary" onclick="saveSettings()">
+            <i class="fas fa-save"></i> Lưu thay đổi
+          </button>
+        </div>
+      </div>
+
+      <!-- GALLERY PAGE -->
+      <div class="admin-page" id="page-gallery">
+        <h2><i class="fas fa-images"></i> Quản lý Gallery</h2>
+        <div class="admin-card">
+          <div class="gallery-tabs" id="adminGalleryTabs" style="justify-content:flex-start;margin-bottom:20px">
+            <button class="gallery-tab active" data-year="2022_2023" onclick="switchAdminGalleryYear('2022_2023',this)">2022 - 2023</button>
+            <button class="gallery-tab" data-year="2023_2024" onclick="switchAdminGalleryYear('2023_2024',this)">2023 - 2024</button>
+            <button class="gallery-tab" data-year="2024_2025" onclick="switchAdminGalleryYear('2024_2025',this)">2024 - 2025</button>
+            <button class="gallery-tab" data-year="2025_2026" onclick="switchAdminGalleryYear('2025_2026',this)">2025 - 2026</button>
+          </div>
+          <div style="background:#EBF5FB;border-radius:10px;padding:16px;margin-bottom:16px;font-size:.85rem;color:var(--blue-dark)">
+            <p style="margin-bottom:8px"><i class="fas fa-lightbulb" style="color:var(--orange)"></i> <strong>Gợi ý nội dung cho từng năm:</strong></p>
+            <ul style="padding-left:20px;list-style:disc;display:flex;flex-direction:column;gap:4px;">
+              <li><strong>2022 - 2023:</strong> Ngày nhập học, tuần lễ sinh hoạt công dân, bạn bè mới</li>
+              <li><strong>2023 - 2024:</strong> Hoạt động câu lạc bộ, sự kiện trường, học nhóm</li>
+              <li><strong>2024 - 2025:</strong> Thực tập, dự án, kỷ niệm đáng nhớ</li>
+              <li><strong>2025 - 2026:</strong> Khóa luận, lễ tốt nghiệp, ảnh kỷ yếu</li>
+            </ul>
+          </div>
+          <!-- Year description -->
+          <div style="background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:20px;margin-bottom:20px">
+            <h4 style="margin-bottom:8px;font-size:.95rem"><i class="fas fa-quote-left" style="color:var(--blue-primary)"></i> Chia sẻ về năm học này</h4>
+            <p style="font-size:.8rem;color:var(--gray);margin-bottom:12px">Viết khoảng 120 từ chia sẻ kỷ niệm, cảm xúc về năm học này. Nội dung sẽ hiển thị trên trang chính.</p>
+            <textarea id="yearDescText" rows="4" placeholder="Ví dụ: Năm đầu đại học là những ngày tháng đầy háo hức..." maxlength="800" style="width:100%;border:1px solid #e5e7eb;border-radius:8px;padding:12px;font-size:.9rem;resize:vertical"></textarea>
+            <button class="btn btn-primary" onclick="saveYearDescription()" style="margin-top:10px">
+              <i class="fas fa-save"></i> Lưu mô tả
+            </button>
+          </div>
+          <!-- Add image form -->
+          <div style="background:#f8fafc;border:2px dashed #cbd5e1;border-radius:12px;padding:20px;margin-bottom:20px">
+            <h4 style="margin-bottom:12px;font-size:.95rem"><i class="fas fa-plus-circle" style="color:var(--blue-primary)"></i> Thêm ảnh mới</h4>
+            <div class="form-group" style="display:flex;gap:8px;align-items:flex-end;margin-bottom:12px">
+              <div style="flex:1">
+                <label>Link Google Drive / URL ảnh</label>
+                <input type="text" id="addImageUrl" placeholder="https://drive.google.com/file/d/.../view">
+              </div>
+            </div>
+            <div class="form-group" style="display:flex;gap:8px;align-items:flex-end;margin-bottom:0">
+              <div style="flex:1">
+                <label>Chú thích ảnh <span style="color:var(--gray);font-weight:400">(không bắt buộc)</span></label>
+                <input type="text" id="addImageCaption" placeholder="Ví dụ: Ngày nhập học đầu tiên 🎒" maxlength="100">
+              </div>
+              <button class="btn btn-primary" onclick="addGalleryImage()" style="margin-bottom:0;height:46px">
+                <i class="fas fa-plus"></i> Thêm
+              </button>
+            </div>
+          </div>
+          <p style="font-size:.8rem;color:var(--gray);margin-bottom:16px">
+            <i class="fas fa-info-circle"></i> Dùng nút <strong>▲ ▼</strong> để đổi vị trí, <i class="fas fa-pen"></i> để sửa chú thích/link, <i class="fas fa-trash"></i> để xóa.
+          </p>
+          <div class="admin-gallery-list" id="adminGalleryGrid"></div>
+        </div>
+      </div>
+
+      <!-- Edit Image Modal -->
+      <div class="modal-overlay" id="editImageModal" style="display:none">
+        <div class="modal-card">
+          <h3><i class="fas fa-pen"></i> Chỉnh sửa ảnh</h3>
+          <div class="form-group">
+            <label>Link ảnh</label>
+            <input type="text" id="editImageUrl" placeholder="Link ảnh">
+          </div>
+          <div class="form-group">
+            <label>Chú thích</label>
+            <input type="text" id="editImageCaption" placeholder="Chú thích ảnh" maxlength="100">
+          </div>
+          <div style="display:flex;gap:8px;justify-content:flex-end">
+            <button class="btn btn-secondary" onclick="closeEditModal()">Hủy</button>
+            <button class="btn btn-primary" onclick="saveEditImage()"><i class="fas fa-save"></i> Lưu</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- INVITATION PAGE -->
+      <div class="admin-page" id="page-invitation">
+        <h2><i class="fas fa-envelope"></i> Thiệp mời</h2>
+        <div class="admin-card">
+          <p style="color:var(--gray);margin-bottom:16px">
+            <i class="fas fa-info-circle"></i> Thiệp mời được tạo tự động từ thông tin sự kiện. Khách chỉ cần nhập tên để tạo thiệp.
+          </p>
+          <h4>Cài đặt thiệp mời (sẽ cập nhật sau)</h4>
+          <p style="color:var(--gray);font-size:.9rem">Tính năng tùy chỉnh template thiệp mời sẽ được bổ sung trong phiên bản tiếp theo.</p>
+        </div>
+      </div>
+
+      <!-- GUESTBOOK PAGE -->
+      <div class="admin-page" id="page-guestbookAdmin">
+        <h2><i class="fas fa-book"></i> Quản lý lưu bút</h2>
+        <div class="admin-card">
+          <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
+            <button class="btn btn-sm btn-primary" onclick="filterGuestbook('all')" id="filterAll">Tất cả</button>
+            <button class="btn btn-sm btn-secondary" onclick="filterGuestbook('pending')" id="filterPending">Chờ duyệt</button>
+            <button class="btn btn-sm btn-secondary" onclick="filterGuestbook('approved')" id="filterApproved">Đã duyệt</button>
+          </div>
+          <div id="adminGuestbookList"></div>
+        </div>
+      </div>
+
+    </main>
+  </div>
+
+  <!-- Toast -->
+  <div class="toast" id="toast"></div>
+
+  <!-- Scripts -->
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+  <script src="firebase-config.js"></script>
+  <script src="admin.js"></script>
+</body>
+</html>
