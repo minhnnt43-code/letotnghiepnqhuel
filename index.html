@@ -36,11 +36,17 @@
 
   <!-- ===== SECTION 1: HERO / EVENT INFO ===== -->
   <section class="hero" id="hero">
+    <!-- Background images -->
+    <div class="hero-bg-images">
+      <div class="hero-bg-img" style="background-image: url('anh1.jpg')"></div>
+      <div class="hero-bg-img" style="background-image: url('anh2.jpg')"></div>
+      <div class="hero-bg-img" style="background-image: url('anh3.jpg')"></div>
+    </div>
     <div class="cloud cloud-1"></div>
     <div class="cloud cloud-2"></div>
     <div class="cloud cloud-3"></div>
     <div class="hero-content" data-aos="fade-up">
-      <h1 class="hero-title">GRADUATION</h1>
+      <h1 class="hero-title">LỄ TỐT NGHIỆP</h1>
       <p class="hero-name">Tân Cử Nhân <span id="graduateName">Nguyễn Quốc Hữu</span></p>
 
       <div class="countdown" id="countdown">
@@ -78,14 +84,16 @@
   <!-- ===== SECTION 2: GALLERY ===== -->
   <section class="section gallery-section" id="gallery">
     <div class="section-header" data-aos="fade-up">
-      <h2>Kỷ Niệm <span class="accent">4 Năm</span> Đại Học</h2>
-      <p>Những khoảnh khắc đáng nhớ trong hành trình sinh viên</p>
+      <h2>Hành trình <span class="accent">4 năm</span> tại UEL</h2>
+      <p class="section-quote">Có những ngày trôi qua rất nhanh, nhanh đến mức mình không kịp để ý mình đã thay đổi từ
+        lúc nào. Bốn năm tại UEL không phải lúc nào cũng rực rỡ, nhưng đủ để mình trưởng thành theo cách rất riêng. Có
+        những điều từng nghĩ sẽ quên, nhưng càng về sau lại càng nhớ rõ hơn. Và bây giờ là lúc mình cùng nhìn lại tất cả
+        hành trình đã&nbsp;qua…</p>
     </div>
     <div class="gallery-tabs" id="galleryTabs">
-      <button class="gallery-tab active" data-year="2022-2023">2022 - 2023</button>
-      <button class="gallery-tab" data-year="2023-2024">2023 - 2024</button>
-      <button class="gallery-tab" data-year="2024-2025">2024 - 2025</button>
-      <button class="gallery-tab" data-year="2025-2026">2025 - 2026</button>
+      <button class="gallery-tab active" data-year="di-qua-cung-nhau">Đi qua cùng nhau</button>
+      <button class="gallery-tab" data-year="hanh-trinh-cung-doan">Hành trình cùng Đoàn</button>
+      <button class="gallery-tab" data-year="nhung-lan-dang-nho">Những lần đáng nhớ</button>
     </div>
     <div class="year-description" id="yearDescription"></div>
     <!-- Carousel -->
@@ -115,7 +123,13 @@
   <section class="section invitation-section" id="invitation">
     <div class="section-header" data-aos="fade-up">
       <h2>Thư Mời <span class="accent">Tham Dự</span></h2>
-      <p>Điền thông tin để nhận thiệp mời của bạn</p>
+      <p class="section-quote">Có lẽ điều mình muốn nói nhiều nhất lúc này là một lời cảm ơn. Cảm ơn vì đã xuất hiện<br
+          class="desktop-break">trong hành trình 4 năm của mình, dù là thầy cô, anh chị hay những người bạn, người
+        em.<br class="desktop-break">Chính sự hiện diện của mọi người đã làm cho quãng thời gian ấy trở nên trọn vẹn hơn
+        rất&nbsp;nhiều.<br><br>Buổi gặp này không chỉ là một lời mời, mà là một lý do để chúng ta cùng gặp nhau,<br
+          class="desktop-break">nhìn nhau một chút, cười với nhau một chút, và cùng chụp một tấm ảnh - để sau này khi
+        nhìn lại,<br class="desktop-break">mình biết rằng đã từng có một khoảng thời gian như vậy, với những con người
+        như&nbsp;vậy.</p>
     </div>
     <div class="invitation-wrapper">
       <div class="invitation-form" data-aos="fade-right">
@@ -124,19 +138,14 @@
           <label for="guestName">Họ và tên</label>
           <input type="text" id="guestName" placeholder="Nhập họ tên của bạn..." maxlength="50">
         </div>
-        <button class="btn btn-primary" id="generateBtn" onclick="generateInvitation()">
-          <i class="fas fa-magic"></i> Tạo thiệp mời
-        </button>
-        <div class="download-area" id="downloadArea" style="display:none">
-          <button class="btn btn-gold" onclick="downloadInvitation()">
-            <i class="fas fa-download"></i> Tải xuống PNG
+        <div class="download-area" id="downloadArea" style="text-align: center; margin-top: 24px;">
+          <button class="btn btn-primary" onclick="downloadInvitation()" style="width: 100%; justify-content: center;">
+            <i class="fas fa-download"></i> Tạo và tải thiệp mời
           </button>
         </div>
       </div>
       <div class="invitation-preview" data-aos="fade-left">
-        <div id="invitation-card">
-          <div class="inv-guest-only inv-placeholder" id="invGuestDisplay">_______________</div>
-        </div>
+        <canvas id="invitation-canvas" style="width:100%;display:block;border-radius:12px;"></canvas>
       </div>
     </div>
   </section>
@@ -145,7 +154,10 @@
   <section class="section guestbook-section" id="guestbook">
     <div class="section-header" data-aos="fade-up">
       <h2>Lưu Bút <span class="accent">Yêu Thương</span></h2>
-      <p>Gửi những lời chúc tốt đẹp nhất</p>
+      <p class="section-quote">Hành trình những năm tháng qua của Quốc Hữu sẽ không thể trọn vẹn nếu thiếu đi sự hiện
+        diện của mọi người. Ngày hôm nay, khi một cánh cửa mới sắp mở ra, mình mong có thể lưu giữ lại nơi đây những lời
+        chúc, những tâm tình hay đơn giản là một kỷ niệm nhỏ mà chúng ta từng có với nhau. Cảm ơn mọi người vì đã ở đây,
+        trong khoảnh khắc ý nghĩa này của cuộc đời&nbsp;mình</p>
     </div>
     <div class="guestbook-form-wrap" data-aos="fade-up">
       <h3 style="margin-bottom:16px;text-align:center"><i class="fas fa-pen-fancy"></i> Viết lưu bút</h3>
@@ -157,7 +169,8 @@
         <label for="gbMessage">Lời nhắn</label>
         <textarea id="gbMessage" rows="4" placeholder="Viết lời chúc của bạn..." maxlength="500"></textarea>
       </div>
-      <button class="btn btn-primary" id="submitGbBtn" onclick="submitGuestbook()" style="width:100%;justify-content:center">
+      <button class="btn btn-primary" id="submitGbBtn" onclick="submitGuestbook()"
+        style="width:100%;justify-content:center">
         <i class="fas fa-paper-plane"></i> Gửi lưu bút
       </button>
       <p id="gbCooldown" style="text-align:center;color:var(--gray);font-size:.8rem;margin-top:8px;display:none"></p>

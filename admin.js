@@ -4,7 +4,7 @@
 
 const ADMIN_USER = 'admin';
 const ADMIN_PASS = 'admin';
-let currentAdminYear = '2022_2023';
+let currentAdminYear = 'di_qua_cung_nhau';
 let gbFilter = 'all';
 
 // ========== AUTH ==========
@@ -106,7 +106,43 @@ function loadAdminSettings() {
     if (data.eventDate) document.getElementById('setDate').value = data.eventDate;
     if (data.eventTime) document.getElementById('setTime').value = data.eventTime;
     if (data.eventLocation) document.getElementById('setLocation').value = data.eventLocation;
+    if (data.heroBgOpacity !== undefined) {
+      document.getElementById('setOpacity').value = data.heroBgOpacity;
+      document.getElementById('opacityVal').textContent = data.heroBgOpacity;
+    }
+    if (data.heroBgBlur !== undefined) {
+      document.getElementById('setBlur').value = data.heroBgBlur;
+      document.getElementById('blurVal').textContent = data.heroBgBlur + 'px';
+    }
+    if (data.heroBgBrightness !== undefined) {
+      document.getElementById('setBrightness').value = data.heroBgBrightness;
+      document.getElementById('brightnessVal').textContent = data.heroBgBrightness;
+    }
+    if (data.heroBgOverlay !== undefined) {
+      document.getElementById('setOverlay').value = data.heroBgOverlay;
+      document.getElementById('overlayVal').textContent = data.heroBgOverlay;
+    }
+    if (data.invitationScale !== undefined) {
+      document.getElementById('setInvScale').value = data.invitationScale;
+      document.getElementById('invScaleVal').textContent = Math.round(data.invitationScale * 100) + '%';
+    }
   });
+}
+
+function resetBackgroundSettings() {
+  document.getElementById('setOpacity').value = 0.35;
+  document.getElementById('opacityVal').textContent = '0.35';
+  
+  document.getElementById('setBlur').value = 6;
+  document.getElementById('blurVal').textContent = '6px';
+  
+  document.getElementById('setBrightness').value = 0.85;
+  document.getElementById('brightnessVal').textContent = '0.85';
+  
+  document.getElementById('setOverlay').value = 1;
+  document.getElementById('overlayVal').textContent = '1';
+  
+  showToast('Đã khôi phục giá trị mặc định. Hãy nhấn "Lưu thay đổi" để áp dụng.', 'info');
 }
 
 function saveSettings() {
@@ -115,10 +151,23 @@ function saveSettings() {
     graduateName: document.getElementById('setName').value.trim() || 'Nguyễn Quốc Hữu',
     eventDate: document.getElementById('setDate').value,
     eventTime: document.getElementById('setTime').value.trim(),
-    eventLocation: document.getElementById('setLocation').value.trim()
+    eventLocation: document.getElementById('setLocation').value.trim(),
+    heroBgOpacity: parseFloat(document.getElementById('setOpacity').value),
+    heroBgBlur: parseInt(document.getElementById('setBlur').value),
+    heroBgBrightness: parseFloat(document.getElementById('setBrightness').value),
+    heroBgOverlay: parseFloat(document.getElementById('setOverlay').value)
   };
   db.ref('settings').set(data).then(() => {
     showToast('Đã lưu thông tin sự kiện! ✅', 'success');
+  }).catch(() => showToast('Lỗi khi lưu!', 'error'));
+}
+
+function saveInvitationSettings() {
+  if (!firebaseReady) { showToast('Firebase chưa kết nối!', 'error'); return; }
+  db.ref('settings').update({
+    invitationScale: parseFloat(document.getElementById('setInvScale').value)
+  }).then(() => {
+    showToast('Đã lưu cài đặt thiệp mời! ✅', 'success');
   }).catch(() => showToast('Lỗi khi lưu!', 'error'));
 }
 
@@ -148,7 +197,7 @@ function saveYearDescription() {
   if (!firebaseReady) { showToast('Firebase chưa kết nối!', 'error'); return; }
   const text = document.getElementById('yearDescText').value.trim();
   db.ref('yearDescriptions/' + currentAdminYear).set(text).then(() => {
-    showToast('Đã lưu mô tả năm học! ✅', 'success');
+    showToast('Đã lưu mô tả! ✅', 'success');
   }).catch(() => showToast('Lỗi khi lưu!', 'error'));
 }
 
@@ -162,7 +211,7 @@ function loadAdminGallery(year) {
     const data = snap.val();
     adminGalleryData = data || {};
     if (!data) {
-      grid.innerHTML = '<p style="color:var(--gray)">Chưa có ảnh nào cho năm học này.</p>';
+      grid.innerHTML = '<p style="color:var(--gray)">Chưa có ảnh nào cho mục này.</p>';
       return;
     }
 

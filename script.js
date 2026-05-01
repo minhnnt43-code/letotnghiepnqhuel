@@ -2,18 +2,49 @@
 // SCRIPT.JS - Main page logic
 // ============================================
 
-let currentYear = '2022-2023';
+let currentYear = 'di-qua-cung-nhau';
 let galleryImages = [];
 let lightboxIndex = 0;
 let guestbookLastKey = null;
 const GB_PAGE_SIZE = 12;
 let gbCooldownActive = false;
 
+// ========== CACHE UTILITIES (giảm Firebase reads) ==========
+const CACHE_TTL = {
+  settings: 300000,   // 5 phút — settings ít thay đổi
+  gallery: 120000,    // 2 phút — gallery ít thay đổi
+  guestbook: 60000    // 1 phút — guestbook cần cập nhật sớm hơn
+};
+
+function cacheGet(key) {
+  try {
+    const raw = sessionStorage.getItem('fb_' + key);
+    if (!raw) return null;
+    const { data, ts, ttl } = JSON.parse(raw);
+    if (Date.now() - ts > ttl) {
+      sessionStorage.removeItem('fb_' + key);
+      return null; // Hết hạn
+    }
+    return data;
+  } catch { return null; }
+}
+
+function cacheSet(key, data, ttl) {
+  try {
+    sessionStorage.setItem('fb_' + key, JSON.stringify({ data, ts: Date.now(), ttl }));
+  } catch { /* sessionStorage full — bỏ qua */ }
+}
+
+function cacheClear(key) {
+  sessionStorage.removeItem('fb_' + key);
+}
+
 // ========== INIT ==========
 document.addEventListener('DOMContentLoaded', () => {
   initFirebase();
   initNav();
   initSparkles();
+  initInvitationCanvas();
 
   if (firebaseReady) {
     loadSettings();
@@ -21,6 +52,18 @@ document.addEventListener('DOMContentLoaded', () => {
     loadGuestbook();
   } else {
     setDefaultContent();
+  }
+
+  // Live preview cho thiệp mời
+  const guestNameInput = document.getElementById('guestName');
+  if (guestNameInput) {
+    guestNameInput.addEventListener('input', () => {
+      const raw = guestNameInput.value.trim();
+      const formatted = raw ? raw.toLowerCase().split(' ')
+        .map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ') : '';
+      invCurrentName = formatted; // Update current name for download
+      renderInvitationCanvas(formatted);
+    });
   }
 
   // Hide loader
@@ -88,23 +131,59 @@ function initSparkles() {
 }
 
 // ========== LOAD SETTINGS ==========
-function loadSettings() {
-  db.ref('settings').on('value', snap => {
-    const data = snap.val();
-    if (!data) { setDefaultContent(); return; }
+function applySettings(data) {
+  if (!data) { setDefaultContent(); return; }
+  if (data.graduateName) {
+    document.getElementById('graduateName').textContent = data.graduateName;
+  }
+  if (data.eventTime) {
+    document.getElementById('eventTime').textContent = data.eventTime;
+  }
+  if (data.eventLocation) {
+    document.getElementById('eventLocation').textContent = data.eventLocation;
+  }
+  if (data.eventDate) {
+    startCountdown(new Date(data.eventDate));
+  }
+  const opacity = data.heroBgOpacity !== undefined ? data.heroBgOpacity : 0.35;
+  const blur = data.heroBgBlur !== undefined ? data.heroBgBlur : 6;
+  const brightness = data.heroBgBrightness !== undefined ? data.heroBgBrightness : 0.85;
 
-    if (data.graduateName) {
-      document.getElementById('graduateName').textContent = data.graduateName;
+  document.querySelectorAll('.hero-bg-img').forEach((img, index) => {
+    // Chỉ làm mờ ảnh ở giữa (index = 1), 2 ảnh bên trái phải (index 0, 2) giữ nguyên độ rõ nét
+    if (index === 1) {
+      img.style.opacity = opacity;
+      img.style.filter = `blur(${blur}px) brightness(${brightness})`;
+    } else {
+      img.style.opacity = 1; // Rõ nét 100%
+      img.style.filter = `brightness(${brightness})`; // Chỉ giữ lại brightness để đồng bộ ánh sáng
     }
-    if (data.eventTime) {
-      document.getElementById('eventTime').textContent = data.eventTime;
-    }
-    if (data.eventLocation) {
-      document.getElementById('eventLocation').textContent = data.eventLocation;
-    }
-    if (data.eventDate) {
-      startCountdown(new Date(data.eventDate));
-    }
+  });
+
+  // Apply overlay opacity
+  if (data.heroBgOverlay !== undefined) {
+    document.querySelector('.hero').style.setProperty('--overlay-opacity', data.heroBgOverlay);
+  }
+
+  // Apply invitation scale
+  if (data.invitationScale !== undefined) {
+    const invCard = document.getElementById('invitation-card');
+    if (invCard) invCard.style.setProperty('--inv-scale', data.invitationScale);
+  }
+}
+
+function loadSettings() {
+  // Thử lấy từ cache trước
+  const cached = cacheGet('settings');
+  if (cached) {
+    applySettings(cached);
+    return; // ← Không gọi Firebase!
+  }
+  // Cache miss → gọi Firebase 1 lần duy nhất (.once thay vì .on)
+  db.ref('settings').once('value', snap => {
+    const data = snap.val();
+    cacheSet('settings', data, CACHE_TTL.settings);
+    applySettings(data);
   });
 }
 
@@ -117,7 +196,7 @@ function setDefaultContent() {
 let countdownInterval = null;
 function startCountdown(targetDate) {
   if (countdownInterval) clearInterval(countdownInterval);
-  
+
   function update() {
     const now = new Date();
     const diff = targetDate - now;
@@ -174,61 +253,84 @@ function loadGallery(year) {
   const counter = document.getElementById('carouselCounter');
   const empty = document.getElementById('galleryEmpty');
   const yearDesc = document.getElementById('yearDescription');
+  const yearKey = year.replace(/-/g, '_');
 
+  // Thử cache trước
+  const cachedDesc = cacheGet('desc_' + yearKey);
+  const cachedGallery = cacheGet('gallery_' + yearKey);
+
+  if (cachedDesc !== null && cachedGallery !== null) {
+    // Có cache → render ngay, không gọi Firebase
+    applyYearDesc(yearDesc, cachedDesc);
+    applyGalleryData(cachedGallery, slide, thumbs, caption, counter);
+    return;
+  }
+
+  // Không có cache → loading rồi gọi Firebase
   slide.innerHTML = '<div class="gallery-empty" id="galleryEmpty"><i class="fas fa-spinner fa-spin"></i><p>Đang tải...</p></div>';
   thumbs.innerHTML = '';
   caption.textContent = '';
   counter.textContent = '';
 
   // Load year description
-  const yearKey = year.replace('-', '_');
   db.ref('yearDescriptions/' + yearKey).once('value', snap => {
     const desc = snap.val();
-    if (desc) {
-      yearDesc.innerHTML = `<i class="fas fa-quote-left"></i> ${escapeHtml(desc)}`;
-      yearDesc.style.display = 'block';
-    } else {
-      yearDesc.style.display = 'none';
-    }
+    cacheSet('desc_' + yearKey, desc, CACHE_TTL.gallery);
+    applyYearDesc(yearDesc, desc);
   });
 
   db.ref('gallery/' + yearKey).limitToFirst(30).once('value', snap => {
     const data = snap.val();
-    galleryData = [];
-    galleryImages = [];
-
-    if (!data) {
-      slide.innerHTML = '<div class="gallery-empty" id="galleryEmpty"><i class="fas fa-images"></i><p>Chưa có hình ảnh cho năm học này.</p></div>';
-      updateCarouselNav();
-      return;
-    }
-
-    // Sort by order, then timestamp
-    const entries = Object.entries(data).sort((a, b) => {
-      const orderA = a[1].order ?? 9999;
-      const orderB = b[1].order ?? 9999;
-      if (orderA !== orderB) return orderA - orderB;
-      return (a[1].timestamp || 0) - (b[1].timestamp || 0);
-    });
-
-    entries.forEach(([key, imgData]) => {
-      const url = convertDriveLink(imgData.url);
-      galleryData.push({ url, caption: imgData.caption || '' });
-      galleryImages.push(url);
-    });
-
-    // Build thumbnails
-    galleryData.forEach((item, i) => {
-      const thumb = document.createElement('div');
-      thumb.className = 'carousel-thumb' + (i === 0 ? ' active' : '');
-      thumb.innerHTML = `<img src="${item.url}" alt="Thumb" loading="lazy" onerror="this.parentElement.style.display='none'">`;
-      thumb.addEventListener('click', () => goToSlide(i));
-      thumbs.appendChild(thumb);
-    });
-
-    carouselIndex = 0;
-    showSlide(0);
+    cacheSet('gallery_' + yearKey, data, CACHE_TTL.gallery);
+    applyGalleryData(data, slide, thumbs, caption, counter);
   });
+}
+
+function applyYearDesc(yearDesc, desc) {
+  if (desc) {
+    yearDesc.innerHTML = `<i class="fas fa-quote-left"></i> ${escapeHtml(desc)}`;
+    yearDesc.style.display = 'block';
+  } else {
+    yearDesc.style.display = 'none';
+  }
+}
+
+function applyGalleryData(data, slide, thumbs, caption, counter) {
+  galleryData = [];
+  galleryImages = [];
+
+  if (!data) {
+    slide.innerHTML = '<div class="gallery-empty" id="galleryEmpty"><i class="fas fa-images"></i><p>Chưa có hình ảnh cho mục này.</p></div>';
+    updateCarouselNav();
+    return;
+  }
+
+  // Sort by order, then timestamp
+  const entries = Object.entries(data).sort((a, b) => {
+    const orderA = a[1].order ?? 9999;
+    const orderB = b[1].order ?? 9999;
+    if (orderA !== orderB) return orderA - orderB;
+    return (a[1].timestamp || 0) - (b[1].timestamp || 0);
+  });
+
+  entries.forEach(([key, imgData]) => {
+    const url = convertDriveLink(imgData.url);
+    galleryData.push({ url, caption: imgData.caption || '' });
+    galleryImages.push(url);
+  });
+
+  // Build thumbnails
+  thumbs.innerHTML = '';
+  galleryData.forEach((item, i) => {
+    const thumb = document.createElement('div');
+    thumb.className = 'carousel-thumb' + (i === 0 ? ' active' : '');
+    thumb.innerHTML = `<img src="${item.url}" alt="Thumb" loading="lazy" onerror="this.parentElement.style.display='none'">`;
+    thumb.addEventListener('click', () => goToSlide(i));
+    thumbs.appendChild(thumb);
+  });
+
+  carouselIndex = 0;
+  showSlide(0);
 }
 
 function showSlide(index) {
@@ -326,54 +428,107 @@ document.addEventListener('keydown', e => {
 });
 
 // ========== INVITATION ==========
-function generateInvitation() {
-  const name = document.getElementById('guestName').value.trim();
-  if (!name) {
-    showToast('Vui lòng nhập họ tên!', 'error');
-    return;
+// Kích thước chuẩn của file thumoi.png (706x1000)
+const INV_W = 706;
+const INV_H = 1000;
+// Vị trí tên: căn giữa toàn bộ chiều ngang của hàng (sau khi xóa "Thân mời" khỏi mẫu)
+const INV_NAME_CENTER_X = 353; // ← Tâm của ảnh 706px (= 706/2), chỉnh nếu cần
+const INV_NAME_Y = 665;        // ← Chỉnh lên/xuống (px trên ảnh gốc 1000px)
+const INV_FONT_SIZE = 34;      // ← Chỉnh kích thước chữ (px trên ảnh gốc)
+
+let invTemplate = null;
+let invCurrentName = '';
+
+// Load ảnh mẫu ngay khi trang tải
+function initInvitationCanvas() {
+  const img = new Image();
+  img.crossOrigin = 'anonymous';
+  img.onload = () => {
+    invTemplate = img;
+    renderInvitationCanvas('');
+  };
+  img.src = 'thumoi.png';
+}
+
+// Vẽ lên canvas với tỉ lệ tùy chỉnh (scale=1 cho preview, scale=2 cho export)
+function drawInvitationOnCanvas(canvas, name, scale = 1) {
+  const w = INV_W * scale;
+  const h = INV_H * scale;
+  canvas.width = w;
+  canvas.height = h;
+  const ctx = canvas.getContext('2d');
+
+  // Vẽ ảnh nền
+  ctx.drawImage(invTemplate, 0, 0, w, h);
+
+  // Vẽ cụm "Thân mời [Tên]" 2 màu căn giữa
+  if (name) {
+    const fontSize = Math.round(INV_FONT_SIZE * scale);
+    const label = 'Thân mời '; // Phần cố định (có khoảng cách sau)
+
+    ctx.font = `bold ${fontSize}px 'Gesco', sans-serif`;
+    ctx.lineJoin = 'round';
+
+    // Đo chiều rộng từng phần để tính điểm bắt đầu
+    const labelWidth = ctx.measureText(label).width;
+    const nameWidth  = ctx.measureText(name).width;
+    const totalWidth = labelWidth + nameWidth;
+    const startX = INV_NAME_CENTER_X * scale - totalWidth / 2;
+    const baseY  = INV_NAME_Y * scale;
+
+    // ── Vẽ "Thân mời " (xanh #398ff1) ──
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 2 * scale;
+    ctx.fillStyle = '#398ff1';
+    ctx.textAlign = 'left';
+    ctx.strokeText(label, startX, baseY);
+    ctx.fillText(label, startX, baseY);
+
+    // ── Vẽ tên khách (cam #ed5548) ──
+    ctx.fillStyle = '#ed5548';
+    ctx.strokeText(name, startX + labelWidth, baseY);
+    ctx.fillText(name, startX + labelWidth, baseY);
   }
-  const display = document.getElementById('invGuestDisplay');
-  display.textContent = `Bạn ${name}`;
-  display.classList.remove('inv-placeholder');
-  display.style.color = 'var(--orange)';
-  display.style.fontWeight = '700';
-  document.getElementById('downloadArea').style.display = 'block';
-  showToast('Thiệp mời đã được tạo! 🎉', 'success');
+}
+
+function renderInvitationCanvas(name) {
+  const canvas = document.getElementById('invitation-canvas');
+  if (!canvas || !invTemplate) return;
+  drawInvitationOnCanvas(canvas, name, 1);
 }
 
 function downloadInvitation() {
-  const card = document.getElementById('invitation-card');
+  const canvas = document.getElementById('invitation-canvas');
   const btn = document.querySelector('#downloadArea .btn');
-  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang tạo...';
+  const nameInput = document.getElementById('guestName').value.trim();
+  
+  if (!nameInput) {
+    showToast('Vui lòng nhập họ tên của bạn trước khi tải!', 'error');
+    document.getElementById('guestName').focus();
+    return;
+  }
+
+  const nameNoSpace = nameInput.replace(/\s+/g, '');
+  const fileName = `ThumoiLTNNguyenQuocHuu_${nameNoSpace}.png`;
+
+  btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Đang tải...';
   btn.disabled = true;
 
-  html2canvas(card, {
-    scale: 2,
-    useCORS: true,
-    backgroundColor: null,
-    logging: false
-  }).then(canvas => {
-    // Try download
-    try {
-      const link = document.createElement('a');
-      link.download = 'thiepmoi-totnghiep.png';
-      link.href = canvas.toDataURL('image/png');
-      link.click();
-    } catch (e) {
-      // Fallback: open in new tab
-      canvas.toBlob(blob => {
-        const url = URL.createObjectURL(blob);
-        window.open(url, '_blank');
-      });
-    }
-    btn.innerHTML = '<i class="fas fa-download"></i> Tải xuống PNG';
+  // Tạo canvas 2x (1412x2000) để xuất chất lượng cao
+  const hiResCanvas = document.createElement('canvas');
+  drawInvitationOnCanvas(hiResCanvas, invCurrentName, 2);
+
+  hiResCanvas.toBlob(blob => {
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.download = fileName;
+    link.href = url;
+    link.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+    btn.innerHTML = '<i class="fas fa-download"></i> Tải thiệp mời';
     btn.disabled = false;
-    showToast('Đã tải thiệp mời! 📥', 'success');
-  }).catch(() => {
-    btn.innerHTML = '<i class="fas fa-download"></i> Tải xuống PNG';
-    btn.disabled = false;
-    showToast('Lỗi khi tạo ảnh, vui lòng thử lại.', 'error');
-  });
+    showToast('Đã tải thiệp mời thành công! 📥', 'success');
+  }, 'image/png', 1.0);
 }
 
 // ========== GUESTBOOK ==========
@@ -404,7 +559,8 @@ function submitGuestbook() {
     btn.innerHTML = '<i class="fas fa-paper-plane"></i> Gửi lưu bút';
     btn.disabled = false;
     startCooldown();
-    loadGuestbook(); // Reload to show immediately
+    cacheClear('guestbook'); // Xóa cache để reload mới nhất
+    loadGuestbook();
 
   }).catch(() => {
     showToast('Lỗi khi gửi, vui lòng thử lại!', 'error');
@@ -436,34 +592,46 @@ function startCooldown() {
 function loadGuestbook() {
   if (!firebaseReady) return;
   const grid = document.getElementById('guestbookGrid');
-  
+
+  // Thử cache trước
+  const cached = cacheGet('guestbook');
+  if (cached) {
+    renderGuestbookData(grid, cached);
+    return;
+  }
+
   db.ref('guestbook')
     .orderByChild('approved')
     .equalTo(true)
     .limitToLast(GB_PAGE_SIZE)
     .once('value', snap => {
-      grid.innerHTML = '';
       const data = snap.val();
-      if (!data) {
-        grid.innerHTML = '<div class="gallery-empty" style="grid-column:1/-1"><i class="fas fa-pen-fancy"></i><p>Chưa có lưu bút nào. Hãy là người đầu tiên!</p></div>';
-        return;
-      }
-      
-      const entries = Object.entries(data).sort((a, b) => b[1].timestamp - a[1].timestamp);
-      if (entries.length >= GB_PAGE_SIZE) {
-        guestbookLastKey = entries[entries.length - 1][0];
-        document.getElementById('loadMoreWrap').style.display = 'block';
-      }
-      
-      entries.forEach(([key, val], i) => {
-        grid.appendChild(createGuestbookCard(val, i));
-      });
+      cacheSet('guestbook', data, CACHE_TTL.guestbook);
+      renderGuestbookData(grid, data);
     });
+}
+
+function renderGuestbookData(grid, data) {
+  grid.innerHTML = '';
+  if (!data) {
+    grid.innerHTML = '<div class="gallery-empty" style="grid-column:1/-1"><i class="fas fa-pen-fancy"></i><p>Chưa có lưu bút nào. Hãy là người đầu tiên!</p></div>';
+    return;
+  }
+
+  const entries = Object.entries(data).sort((a, b) => b[1].timestamp - a[1].timestamp);
+  if (entries.length >= GB_PAGE_SIZE) {
+    guestbookLastKey = entries[entries.length - 1][0];
+    document.getElementById('loadMoreWrap').style.display = 'block';
+  }
+
+  entries.forEach(([key, val], i) => {
+    grid.appendChild(createGuestbookCard(val, i));
+  });
 }
 
 function loadMoreGuestbook() {
   if (!firebaseReady || !guestbookLastKey) return;
-  
+
   db.ref('guestbook')
     .orderByChild('approved')
     .equalTo(true)

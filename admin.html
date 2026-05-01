@@ -77,6 +77,35 @@
             <label>Tên tân cử nhân</label>
             <input type="text" id="setName" value="Nguyễn Quốc Hữu" placeholder="Nguyễn Quốc Hữu">
           </div>
+          
+          <h4 style="margin-top: 24px; margin-bottom: 16px; border-bottom: 1px solid #e5e7eb; padding-bottom: 8px;"><i class="fas fa-image"></i> Tùy chỉnh ảnh nền (Hero Background)</h4>
+          <div style="background: #f8fafc; border-radius: 12px; padding: 16px; margin-bottom: 20px;">
+            <div class="form-group">
+              <label>Độ hiển thị ảnh (Opacity: 0 - 1)</label>
+              <input type="range" id="setOpacity" min="0" max="1" step="0.05" value="0.35" oninput="document.getElementById('opacityVal').textContent = this.value">
+              <span id="opacityVal" style="font-size: 0.85rem; font-weight: 600; color: var(--blue-primary); display: inline-block;">0.35</span>
+            </div>
+            <div class="form-group">
+              <label>Độ nhòe (Blur: 0px - 20px) - <i>Giảm về 0 để ảnh rõ nét</i></label>
+              <input type="range" id="setBlur" min="0" max="20" step="1" value="6" oninput="document.getElementById('blurVal').textContent = this.value + 'px'">
+              <span id="blurVal" style="font-size: 0.85rem; font-weight: 600; color: var(--blue-primary); display: inline-block;">6px</span>
+            </div>
+            <div class="form-group">
+              <label>Độ sáng (Brightness: 0.1 - 2.0)</label>
+              <input type="range" id="setBrightness" min="0.1" max="2.0" step="0.05" value="0.85" oninput="document.getElementById('brightnessVal').textContent = this.value">
+              <span id="brightnessVal" style="font-size: 0.85rem; font-weight: 600; color: var(--blue-primary); display: inline-block;">0.85</span>
+            </div>
+            <div class="form-group">
+              <label>Độ đậm của lớp phủ màu xanh (Overlay: 0 - 1) - <i>Giảm về 0 để nhìn thấy ảnh thật nhất</i></label>
+              <input type="range" id="setOverlay" min="0" max="1" step="0.05" value="1" oninput="document.getElementById('overlayVal').textContent = this.value">
+              <span id="overlayVal" style="font-size: 0.85rem; font-weight: 600; color: var(--blue-primary); display: inline-block;">1</span>
+            </div>
+            <button class="btn btn-sm btn-secondary" onclick="resetBackgroundSettings()" style="margin-top: 8px;">
+              <i class="fas fa-undo"></i> Khôi phục mặc định
+            </button>
+          </div>
+
+          <h4 style="margin-top: 24px; margin-bottom: 16px; border-bottom: 1px solid #e5e7eb; padding-bottom: 8px;"><i class="fas fa-calendar-alt"></i> Thông tin thời gian & địa điểm</h4>
           <div class="form-group">
             <label>Ngày lễ (dùng cho countdown)</label>
             <input type="datetime-local" id="setDate" value="2026-06-15T08:00">
@@ -100,24 +129,22 @@
         <h2><i class="fas fa-images"></i> Quản lý Gallery</h2>
         <div class="admin-card">
           <div class="gallery-tabs" id="adminGalleryTabs" style="justify-content:flex-start;margin-bottom:20px">
-            <button class="gallery-tab active" data-year="2022_2023" onclick="switchAdminGalleryYear('2022_2023',this)">2022 - 2023</button>
-            <button class="gallery-tab" data-year="2023_2024" onclick="switchAdminGalleryYear('2023_2024',this)">2023 - 2024</button>
-            <button class="gallery-tab" data-year="2024_2025" onclick="switchAdminGalleryYear('2024_2025',this)">2024 - 2025</button>
-            <button class="gallery-tab" data-year="2025_2026" onclick="switchAdminGalleryYear('2025_2026',this)">2025 - 2026</button>
+            <button class="gallery-tab active" data-year="di_qua_cung_nhau" onclick="switchAdminGalleryYear('di_qua_cung_nhau',this)">Đi qua cùng nhau</button>
+            <button class="gallery-tab" data-year="hanh_trinh_cung_doan" onclick="switchAdminGalleryYear('hanh_trinh_cung_doan',this)">Hành trình cùng Đoàn</button>
+            <button class="gallery-tab" data-year="nhung_lan_dang_nho" onclick="switchAdminGalleryYear('nhung_lan_dang_nho',this)">Những lần đáng nhớ</button>
           </div>
           <div style="background:#EBF5FB;border-radius:10px;padding:16px;margin-bottom:16px;font-size:.85rem;color:var(--blue-dark)">
-            <p style="margin-bottom:8px"><i class="fas fa-lightbulb" style="color:var(--orange)"></i> <strong>Gợi ý nội dung cho từng năm:</strong></p>
+            <p style="margin-bottom:8px"><i class="fas fa-lightbulb" style="color:var(--orange)"></i> <strong>Gợi ý nội dung cho từng mục:</strong></p>
             <ul style="padding-left:20px;list-style:disc;display:flex;flex-direction:column;gap:4px;">
-              <li><strong>2022 - 2023:</strong> Ngày nhập học, tuần lễ sinh hoạt công dân, bạn bè mới</li>
-              <li><strong>2023 - 2024:</strong> Hoạt động câu lạc bộ, sự kiện trường, học nhóm</li>
-              <li><strong>2024 - 2025:</strong> Thực tập, dự án, kỷ niệm đáng nhớ</li>
-              <li><strong>2025 - 2026:</strong> Khóa luận, lễ tốt nghiệp, ảnh kỷ yếu</li>
+              <li><strong>Đi qua cùng nhau:</strong> Ảnh bạn bè, nhóm học, khoảnh khắc bên nhau</li>
+              <li><strong>Hành trình cùng Đoàn:</strong> Hoạt động Đoàn - Hội, tình nguyện, sự kiện</li>
+              <li><strong>Những lần đáng nhớ:</strong> Kỷ niệm đặc biệt, thành tích, cột mốc quan trọng</li>
             </ul>
           </div>
           <!-- Year description -->
           <div style="background:#fff;border:1px solid #e5e7eb;border-radius:12px;padding:20px;margin-bottom:20px">
-            <h4 style="margin-bottom:8px;font-size:.95rem"><i class="fas fa-quote-left" style="color:var(--blue-primary)"></i> Chia sẻ về năm học này</h4>
-            <p style="font-size:.8rem;color:var(--gray);margin-bottom:12px">Viết khoảng 120 từ chia sẻ kỷ niệm, cảm xúc về năm học này. Nội dung sẽ hiển thị trên trang chính.</p>
+            <h4 style="margin-bottom:8px;font-size:.95rem"><i class="fas fa-quote-left" style="color:var(--blue-primary)"></i> Chia sẻ về mục này</h4>
+            <p style="font-size:.8rem;color:var(--gray);margin-bottom:12px">Viết khoảng 120 từ chia sẻ kỷ niệm, cảm xúc về mục này. Nội dung sẽ hiển thị trên trang chính.</p>
             <textarea id="yearDescText" rows="4" placeholder="Ví dụ: Năm đầu đại học là những ngày tháng đầy háo hức..." maxlength="800" style="width:100%;border:1px solid #e5e7eb;border-radius:8px;padding:12px;font-size:.9rem;resize:vertical"></textarea>
             <button class="btn btn-primary" onclick="saveYearDescription()" style="margin-top:10px">
               <i class="fas fa-save"></i> Lưu mô tả
@@ -173,10 +200,16 @@
         <h2><i class="fas fa-envelope"></i> Thiệp mời</h2>
         <div class="admin-card">
           <p style="color:var(--gray);margin-bottom:16px">
-            <i class="fas fa-info-circle"></i> Thiệp mời được tạo tự động từ thông tin sự kiện. Khách chỉ cần nhập tên để tạo thiệp.
+            <i class="fas fa-info-circle"></i> Thiệp mời được tạo tự động từ thông tin sự kiện.
           </p>
-          <h4>Cài đặt thiệp mời (sẽ cập nhật sau)</h4>
-          <p style="color:var(--gray);font-size:.9rem">Tính năng tùy chỉnh template thiệp mời sẽ được bổ sung trong phiên bản tiếp theo.</p>
+          <div class="form-group">
+            <label>Kích thước tên khách (Tỉ lệ %)</label>
+            <input type="range" id="setInvScale" min="0.5" max="2.0" step="0.1" value="1.0" oninput="document.getElementById('invScaleVal').textContent = Math.round(this.value * 100) + '%'">
+            <span id="invScaleVal" style="font-size: 0.85rem; font-weight: 600; color: var(--blue-primary); display: inline-block;">100%</span>
+          </div>
+          <button class="btn btn-primary" onclick="saveInvitationSettings()">
+            <i class="fas fa-save"></i> Lưu cài đặt
+          </button>
         </div>
       </div>
 
